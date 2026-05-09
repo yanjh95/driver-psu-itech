@@ -87,7 +87,6 @@ class ITECH_PSU:
 
     def check_errors(self):
         # Reads all errors in the instrument's error queue until it is empty.
-        print("Checking for errors...")
         errors_found = []
         
         while True:
@@ -98,14 +97,11 @@ class ITECH_PSU:
             if error_str.startswith("0"):
                 break # Queue is empty
                 
-            print(f"INSTRUMENT ERROR: {error_str}")
             errors_found.append(error_str)
             
         if errors_found:
             # We found errors, so crash python AFTER flushing the queue
             raise RuntimeError(f"Hardware reported {len(errors_found)} error(s): {errors_found}")
-        else:
-            print("No errors.")
 
 
     def set(self, voltage=None, amps=None):
@@ -144,17 +140,22 @@ class ITECH_PSU:
         #Checks current state
         self.state = int(self.inst.query("OUTP?").strip())
 
-        if self.state == state:
-            if state == 0:
-                print("Device output is already disabled")
-            else:
-                print("Device output is already enabled")
-        else:
-            print(f"device was {self.state}")
+        if self.state != state:
             self.inst.write(f'OUTP {state}')
-            print(f"Device state set to {state}")
             self.check_errors()
         
+
+    def measure_power(self):
+        """Reads the internal wattage calculation"""
+        return float(self.inst.query("MEAS:POW?").strip())
+
+    def measure_ovp(self):
+        """Reads the hardware OverVoltage Protection limit"""
+        return float(self.inst.query("VOLT:PROT?").strip())
+
+    def measure_ocp(self):
+        """Reads the hardware OverCurrent Protection limit"""
+        return float(self.inst.query("CURR:PROT?").strip())
 
     def set_protection(self, OV, OC):
         if not (0 < OV <= self.maxV):
@@ -171,10 +172,17 @@ class ITECH_PSU:
         if not (setA < OC):
             raise ValueError(f"OverCurrent({OC}A) needs to be > setA({setA}A)")
 
-        print(f"Setting OverVoltage to {OV}V, OverCurrent to {OC}A")
         self.inst.write(f"VOLT:PROT {OV}")
         self.inst.write(f"CURR:PROT {OC}")
         self.check_errors()
+
+    def get_target_voltage(self) -> float:
+        """Returns the programmed voltage setpoint"""
+        return float(self.inst.query("VOLT?").strip())
+
+    def get_target_current(self) -> float:
+        """Returns the programmed current limit setpoint"""
+        return float(self.inst.query("CURR?").strip())
 
     def measure_voltage(self) -> float:
         """Returns the actual voltage currently being output by the PSU"""
