@@ -28,7 +28,7 @@ class ITECH_PSU:
             with open(registry_file, "r") as f:
                 registry = json.load(f)
         else:
-            raise Exception(f"Warning: Registry file '{registry_file}' not found.")
+            raise FileNotFoundError(f"Registry file '{registry_file}' not found. Please run 'python3 register_psu.py' first to initialize the registry!")
 
         rm = pyvisa.ResourceManager()
         target_resource = None
