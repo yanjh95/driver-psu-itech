@@ -61,11 +61,11 @@ class ITECH_PSU:
 
         self.inst = rm.open_resource(self.resource_name)
 
+
     def close(self):
         """Safely disables output and releases the PyVISA USB lock"""
         if self.inst is not None:
             print("Safely powering down and closing connection...")
-            self.enable(0) # Ensure output is off before closing
             self.inst.close()
 
 
@@ -108,27 +108,39 @@ class ITECH_PSU:
             print("No errors.")
 
 
-    def set(self, voltage, amps):
+    def set(self, voltage=None, amps=None):
+        if voltage is None and amps is None:
+            raise ValueError("You must specify either voltage or amps (or both) when calling set().")
+
+        # Query existing values if one is missing so we can do the math
+        target_v = voltage if voltage is not None else float(self.inst.query("VOLT?").strip())
+        target_a = amps if amps is not None else float(self.inst.query("CURR?").strip())
+
         # 1. Check max power
-        if voltage * amps > self.maxP:
-            raise ValueError(f"Error: {voltage}V * {amps}A = {voltage*amps}W (Exceeds {self.maxP}W limit!)")
+        if target_v * target_a > self.maxP:
+            raise ValueError(f"Error: {target_v}V * {target_a}A = {target_v*target_a}W (Exceeds {self.maxP}W limit!)")
 
         # 2. Check individual limits
-        if not (0 <= voltage <= self.maxV):
+        if voltage is not None and not (0 <= voltage <= self.maxV):
             raise ValueError(f"Error: Voltage {voltage}V is outside of range 0 - {self.maxV}V")
             
-        if not (0 <= amps <= self.maxA):
+        if amps is not None and not (0 <= amps <= self.maxA):
             raise ValueError(f"Error: Current {amps}A is outside of range 0 - {self.maxA}A")
 
-        # 3. If everything is safe, send the strings!
-        self.inst.write(f'VOLT {voltage}')
-        self.inst.write(f'CURR {amps}')
+        # 3. If everything is safe, send the specific strings!
+        if voltage is not None:
+            self.inst.write(f'VOLT {voltage}')
+        if amps is not None:
+            self.inst.write(f'CURR {amps}')
         
         # 4. Confirm the hardware agreed
         self.check_errors()
     
 
     def enable(self,state):
+        if state not in (0, 1):
+            raise ValueError(f"Error: Enable state must be 0 or 1, but received '{state}'.")
+
         #Checks current state
         self.state = int(self.inst.query("OUTP?").strip())
 
@@ -181,8 +193,8 @@ def main():
     psu = None
     try:
         psu = ITECH_PSU()
-        psu.set_protection(110, 2)
-        psu.set(100, 1)
+        psu.set_protection(2,2)
+        psu.set(1, 1)
         psu.enable(1)
 
         # A simple telemetry loop!
