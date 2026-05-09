@@ -1,0 +1,9 @@
+{
+    "USB0::0x2EC7::0x6900::800776011807210025::INSTR": {
+        "model": "IT6933A",
+        "description": "ITECH IT6953A 150V 5A 200W",
+        "maxV": 150,
+        "maxA": 5,
+        "maxP": 200
+    }
+}
