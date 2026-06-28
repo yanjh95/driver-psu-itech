@@ -2,4 +2,6 @@
 PSUvenv/
 __pycache__/
 *.pyc
+run.sh
+run.bat
 yanjh95gitKEY*

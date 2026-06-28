@@ -32,6 +32,7 @@ class ITECH_PSU:
 
         rm = pyvisa.ResourceManager()
         target_resource = None
+        matched_registry_key = None
 
         if resource_name:
             target_resource = resource_name
@@ -39,9 +40,23 @@ class ITECH_PSU:
             resources = rm.list_resources()
             print(f"Discovered instruments: {resources}")
             for res in resources:
+                # Try exact match first
                 if res in registry:
                     print(f"Found known PSU in registry: {res}")
                     target_resource = res
+                    matched_registry_key = res
+                    break
+                # Fall back to VID/PID matching (handles hex vs decimal and serial differences)
+                res_vid_pid = self._extract_vid_pid(res)
+                if res_vid_pid:
+                    for reg_key in registry:
+                        reg_vid_pid = self._extract_vid_pid(reg_key)
+                        if reg_vid_pid and res_vid_pid == reg_vid_pid:
+                            print(f"Matched PSU by VID/PID: {res} → registry entry {reg_key}")
+                            target_resource = res
+                            matched_registry_key = reg_key
+                            break
+                if target_resource:
                     break
             
             if not target_resource:
@@ -50,8 +65,9 @@ class ITECH_PSU:
         self.resource_name = target_resource
         
         # Apply limits if found in registry
-        if self.resource_name in registry:
-            params = registry[self.resource_name]
+        lookup_key = matched_registry_key or self.resource_name
+        if lookup_key in registry:
+            params = registry[lookup_key]
             self.maxV = params.get("maxV", 0)
             self.maxA = params.get("maxA", 0)
             self.maxP = params.get("maxP", 0)
@@ -60,6 +76,23 @@ class ITECH_PSU:
             print(f"Warning: '{self.resource_name}' not found in registry. Limits are set to 0.")
 
         self.inst = rm.open_resource(self.resource_name)
+
+
+    @staticmethod
+    def _extract_vid_pid(resource_string):
+        """Extracts (VID, PID) as integers from a USB VISA resource string.
+        Handles both hex (0x2EC7) and decimal (11975) formats.
+        Returns None if not a USB resource."""
+        import re
+        match = re.match(r'USB\d*::([^:]+)::([^:]+)::', resource_string, re.IGNORECASE)
+        if not match:
+            return None
+        try:
+            vid = int(match.group(1), 0)  # auto-detects hex (0x...) or decimal
+            pid = int(match.group(2), 0)
+            return (vid, pid)
+        except ValueError:
+            return None
 
 
     def close(self):
@@ -145,9 +178,7 @@ class ITECH_PSU:
             self.check_errors()
         
 
-    def measure_power(self):
-        """Reads the internal wattage calculation"""
-        return float(self.inst.query("MEAS:POW?").strip())
+
 
     def measure_ovp(self):
         """Reads the hardware OverVoltage Protection limit"""
@@ -157,23 +188,26 @@ class ITECH_PSU:
         """Reads the hardware OverCurrent Protection limit"""
         return float(self.inst.query("CURR:PROT?").strip())
 
-    def set_protection(self, OV, OC):
-        if not (0 < OV <= self.maxV):
-            raise ValueError(f"Error: OverVoltage needs to be <= {self.maxV}")
-        if not (0 < OC <= self.maxA):
-            raise ValueError(f"Error: OverCurrent needs to be <= {self.maxA}")
-            
-        # Parse as float, not int!
-        setV = float(self.inst.query("VOLT?").strip())
-        if not (setV < OV):
-            raise ValueError(f"OverVoltage({OV}V) needs to be > setV({setV}V)")
-            
-        setA = float(self.inst.query("CURR?").strip())
-        if not (setA < OC):
-            raise ValueError(f"OverCurrent({OC}A) needs to be > setA({setA}A)")
+    def set_protection(self, OV=None, OC=None):
+        if OV is None and OC is None:
+            raise ValueError("You must specify either OV or OC (or both) when calling set_protection().")
 
-        self.inst.write(f"VOLT:PROT {OV}")
-        self.inst.write(f"CURR:PROT {OC}")
+        if OV is not None:
+            if not (0 < OV <= self.maxV):
+                raise ValueError(f"Error: OverVoltage needs to be <= {self.maxV}")
+            setV = float(self.inst.query("VOLT?").strip())
+            if not (setV < OV):
+                raise ValueError(f"OverVoltage({OV}V) needs to be > setV({setV}V)")
+            self.inst.write(f"VOLT:PROT {OV}")
+
+        if OC is not None:
+            if not (0 < OC <= self.maxA):
+                raise ValueError(f"Error: OverCurrent needs to be <= {self.maxA}")
+            setA = float(self.inst.query("CURR?").strip())
+            if not (setA < OC):
+                raise ValueError(f"OverCurrent({OC}A) needs to be > setA({setA}A)")
+            self.inst.write(f"CURR:PROT {OC}")
+
         self.check_errors()
 
     def get_target_voltage(self) -> float:
@@ -201,7 +235,7 @@ def main():
     psu = None
     try:
         psu = ITECH_PSU()
-        psu.set_protection(2,2)
+        psu.set_protection(OV=2, OC=2)
         psu.set(1, 1)
         psu.enable(1)
 

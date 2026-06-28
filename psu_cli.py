@@ -1,4 +1,3 @@
-from os import stat_result
 from ITECH_PSU import ITECH_PSU
 import argparse
 import time
@@ -21,6 +20,7 @@ def main():
     # parse what the user types in the terminal
     args = parser.parse_args()
 
+    psu = None
     try:
         if args.device is not None:
             # Connect to the specified PSU
@@ -53,7 +53,8 @@ def main():
 
 
     finally:
-        psu.close()
+        if psu is not None:
+            psu.close()
 
 
 
@@ -70,7 +71,7 @@ def run_live_dashboard(stdscr, psu):
         
     stdscr.clear()
 
-    fields = ["Voltage", "Current", "OV Limit", "OC Limit", "Output"]
+    fields = ["Voltage", "Current", "OV Limit", "OC Limit"]
     
     # Internal cache speeds up rendering
     state = {
@@ -96,6 +97,14 @@ def run_live_dashboard(stdscr, psu):
             if not edit_mode:
                 if key == ord('q'):
                     break
+                elif key == ord('e'):
+                    try:
+                        current_state = int(psu.inst.query("OUTP?").strip())
+                        psu.enable(0 if current_state == 1 else 1)
+                        last_update = 0  # Force immediate telemetry refresh
+                        error_msg = ""
+                    except Exception as e:
+                        error_msg = f"ERR: {str(e)}"
                 elif key == curses.KEY_DOWN:
                     selected = (selected + 1) % len(fields)
                     error_msg = ""
@@ -115,18 +124,14 @@ def run_live_dashboard(stdscr, psu):
                 if key == ord('\n'): # User pressed Enter to submit
                     try:
                         field_name = fields[selected]
-                        if field_name == "Output":
-                            psu.enable(int(edit_string))
-                        elif field_name == "Voltage":
+                        if field_name == "Voltage":
                             psu.set(voltage=float(edit_string))
                         elif field_name == "Current":
                             psu.set(amps=float(edit_string))
                         elif field_name == "OV Limit":
-                            old_oc = float(state["OC Limit"].replace(" A", ""))
-                            psu.set_protection(OV=float(edit_string), OC=old_oc)
+                            psu.set_protection(OV=float(edit_string))
                         elif field_name == "OC Limit":
-                            old_ov = float(state["OV Limit"].replace(" V", ""))
-                            psu.set_protection(OV=old_ov, OC=float(edit_string))
+                            psu.set_protection(OC=float(edit_string))
                         
                         edit_mode = False
                         curses.curs_set(0)
@@ -168,7 +173,7 @@ def run_live_dashboard(stdscr, psu):
         # Render Table
         stdscr.erase()
         stdscr.addstr(0, 0, "=== ITECH PSU LIVE DASHBOARD ===", curses.A_BOLD)
-        stdscr.addstr(1, 0, "Navigate: [Arrows] | Edit: [Numbers] | Cancel: [ESC] | Quit: [q]")
+        stdscr.addstr(1, 0, "Navigate: [Arrows] | Edit: [Numbers] | Enable/Disable: [E] | Cancel: [ESC] | Quit: [q]")
         
         table_list = [
             ["Voltage", state["Set Voltage"], state["Actual V"]],
@@ -190,10 +195,11 @@ def run_live_dashboard(stdscr, psu):
                 
                 if is_data_row:
                     row_index = (i - 3) // 2
-                    if row_index == selected:
+                    if row_index < len(fields) and row_index == selected:
                         style |= curses.A_REVERSE
                         
-                    if fields[row_index] == "Output" and curses.has_colors():
+                    # Color the Output row (last data row, not in fields list)
+                    if "Output" in text and curses.has_colors():
                         if "ON" in text:
                             style |= curses.color_pair(1) | curses.A_BOLD
                         elif "OFF" in text:
