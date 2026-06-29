@@ -1,0 +1,9 @@
+description,Voltage Sweep - Step through 5V 12V 24V 48V
+time_s,voltage,current
+0,5,1
+10,12,2
+20,24,3
+30,48,5
+40,24,3
+50,12,2
+60,0,0

@@ -26,9 +26,9 @@ REM 2. Activate and install dependencies
 echo [+] Installing dependencies...
 call "%VENV_DIR%\Scripts\activate.bat"
 pip install --upgrade pip --quiet
-pip install pyvisa pyvisa-py pyusb tabulate --quiet
+pip install pyvisa pyvisa-py pyusb tabulate asciichartpy --quiet
 
-echo [✓] Dependencies installed: pyvisa, pyvisa-py, pyusb, tabulate
+echo [✓] Dependencies installed: pyvisa, pyvisa-py, pyusb, tabulate, asciichartpy
 
 REM 3. Generate run.bat
 echo [+] Creating run.bat...

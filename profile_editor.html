@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSU Profile Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a2332;
+            --bg-input: #0d1520;
+            --border: #2a3a4e;
+            --border-focus: #3b82f6;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-yellow: #eab308;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #a855f7;
+            --chart-voltage: #22c55e;
+            --chart-current: #06b6d4;
+            --glow-blue: rgba(59, 130, 246, 0.15);
+            --glow-green: rgba(34, 197, 94, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 32px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 4px 20px var(--glow-blue);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Buttons */
+        .btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+            color: white;
+            box-shadow: 0 2px 12px var(--glow-blue);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--glow-blue);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--accent-green), #16a34a);
+            color: white;
+            box-shadow: 0 2px 12px var(--glow-green);
+        }
+        .btn-success:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--glow-green);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover {
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        /* Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: border-color 0.3s ease;
+        }
+        .card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .icon {
+            font-size: 16px;
+        }
+
+        /* Profile Info */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--glow-blue);
+        }
+
+        /* Steps Table */
+        .steps-card {
+            grid-column: 1 / -1;
+        }
+
+        .steps-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .steps-table thead th {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 10px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .steps-table tbody tr {
+            transition: background 0.15s;
+        }
+        .steps-table tbody tr:hover {
+            background: rgba(59, 130, 246, 0.04);
+        }
+
+        .steps-table td {
+            padding: 8px 16px;
+            border-bottom: 1px solid rgba(42, 58, 78, 0.5);
+            vertical-align: middle;
+        }
+
+        .step-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            text-align: right;
+            transition: border-color 0.2s;
+        }
+        .step-input:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 2px var(--glow-blue);
+        }
+
+        .step-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+            width: 30px;
+            text-align: center;
+        }
+
+        .step-unit {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        .input-with-unit {
+            display: flex;
+            align-items: center;
+        }
+
+        .input-with-unit .step-input {
+            border-radius: 6px 0 0 6px;
+        }
+
+        .input-with-unit .unit-badge {
+            padding: 8px 10px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid var(--border);
+            border-left: none;
+            border-radius: 0 6px 6px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--accent-blue);
+            white-space: nowrap;
+        }
+
+        .delete-step-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            transition: all 0.15s;
+            font-size: 16px;
+        }
+        .delete-step-btn:hover {
+            color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .add-step-row {
+            display: flex;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        /* Chart */
+        .chart-card {
+            grid-column: 1 / -1;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            background: var(--bg-input);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 24px;
+            margin-top: 12px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Stats */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--accent-blue);
+        }
+
+        /* CSV Preview */
+        .csv-preview {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--accent-green);
+            line-height: 1.6;
+            white-space: pre;
+            overflow-x: auto;
+            max-height: 200px;
+        }
+
+        /* Import section */
+        .import-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .import-zone:hover {
+            border-color: var(--accent-blue);
+            background: var(--glow-blue);
+        }
+        .import-zone p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .hidden-input { display: none; }
+
+        .ramp-rate {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        .ramp-rate .ramp-v { color: var(--chart-voltage); }
+        .ramp-rate .ramp-a { color: var(--chart-current); }
+        .ramp-rate .ramp-zero { color: var(--text-muted); }
+        .ramp-rate .ramp-na { color: var(--text-muted); font-style: italic; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .steps-card, .chart-card { grid-column: 1; }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            display: none;
+        }
+
+        .tooltip .tt-time { color: var(--text-muted); }
+        .tooltip .tt-voltage { color: var(--chart-voltage); }
+        .tooltip .tt-current { color: var(--chart-current); }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="logo-icon">⚡</div>
+                <div>
+                    <h1>PSU Profile Editor</h1>
+                    <p>Create and preview voltage/current test profiles</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-outline" onclick="importCSV()">
+                    📂 Import CSV
+                </button>
+                <button class="btn btn-success" onclick="downloadCSV()">
+                    💾 Download Profile
+                </button>
+            </div>
+        </div>
+
+        <input type="file" id="fileInput" class="hidden-input" accept=".csv" onchange="handleFileImport(event)">
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-chip">
+                <span>Steps</span>
+                <span class="stat-value" id="statSteps">0</span>
+            </div>
+            <div class="stat-chip">
+                <span>Duration</span>
+                <span class="stat-value" id="statDuration">0s</span>
+            </div>
+            <div class="stat-chip">
+                <span>Max Voltage</span>
+                <span class="stat-value" id="statMaxV">0V</span>
+            </div>
+            <div class="stat-chip">
+                <span>Max Current</span>
+                <span class="stat-value" id="statMaxA">0A</span>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Profile Info -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><span class="icon">📋</span> Profile Info</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Filename</label>
+                    <input type="text" class="form-input" id="profileFilename" value="my_profile" placeholder="my_profile">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <input type="text" class="form-input" id="profileDesc" value="" placeholder="e.g. 24V soak test with 5A limit">
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex:1">
+                        <label class="form-label">OV Protection Limit (V)</label>
+                        <input type="number" class="form-input" id="profileOV" value="" min="0" step="0.1" placeholder="e.g. 26">
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label class="form-label">OC Protection Limit (A)</label>
+                        <input type="number" class="form-input" id="profileOC" value="" min="0" step="0.1" placeholder="e.g. 6">
+                    </div>
+                </div>
+            </div>
+
+            <!-- CSV Preview -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title"><span class="icon">📄</span> CSV Output Preview</span>
+                </div>
+                <div class="csv-preview" id="csvPreview">Loading...</div>
+            </div>
+
+            <!-- Steps Table -->
+            <div class="card steps-card">
+                <div class="card-header">
+                    <span class="card-title"><span class="icon">📊</span> Profile Steps</span>
+                    <button class="btn btn-primary btn-sm" onclick="addStep()">+ Add Step</button>
+                </div>
+                <table class="steps-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px">#</th>
+                            <th>Time</th>
+                            <th>Voltage</th>
+                            <th>Current</th>
+                            <th>Ramp Rate</th>
+                            <th style="width:50px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="stepsBody"></tbody>
+                </table>
+                <div class="add-step-row">
+                    <button class="btn btn-outline btn-sm" onclick="addStep()">+ Add Step</button>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="card chart-card">
+                <div class="card-header">
+                    <span class="card-title"><span class="icon">📈</span> Profile Preview</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="profileChart"></canvas>
+                    <div class="tooltip" id="tooltip"></div>
+                </div>
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: var(--chart-voltage)"></div>
+                        <span>Voltage (V)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: var(--chart-current)"></div>
+                        <span>Current (A)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let steps = [
+            { time: 0, voltage: 0, current: 1 },
+            { time: 5, voltage: 12, current: 2 },
+            { time: 10, voltage: 24, current: 5 },
+            { time: 40, voltage: 24, current: 5 },
+            { time: 45, voltage: 12, current: 2 },
+            { time: 50, voltage: 0, current: 0 }
+        ];
+
+        // DOM
+        const stepsBody = document.getElementById('stepsBody');
+        const csvPreview = document.getElementById('csvPreview');
+        const canvas = document.getElementById('profileChart');
+        const ctx = canvas.getContext('2d');
+        const tooltipEl = document.getElementById('tooltip');
+
+        // Initialize
+        render();
+
+        function render() {
+            renderSteps();
+            renderCSV();
+            renderChart();
+            renderStats();
+        }
+
+        function renderStats() {
+            document.getElementById('statSteps').textContent = steps.length;
+            const maxT = steps.length ? Math.max(...steps.map(s => s.time)) : 0;
+            const maxV = steps.length ? Math.max(...steps.map(s => s.voltage)) : 0;
+            const maxA = steps.length ? Math.max(...steps.map(s => s.current)) : 0;
+            document.getElementById('statDuration').textContent = maxT + 's';
+            document.getElementById('statMaxV').textContent = maxV.toFixed(1) + 'V';
+            document.getElementById('statMaxA').textContent = maxA.toFixed(1) + 'A';
+        }
+
+        function formatRampRate(val, unit) {
+            if (val === 0) return `<span class="ramp-zero">0 ${unit}/s</span>`;
+            const sign = val > 0 ? '+' : '';
+            const cls = unit === 'V' ? 'ramp-v' : 'ramp-a';
+            return `<span class="${cls}">${sign}${val.toFixed(2)} ${unit}/s</span>`;
+        }
+
+        function renderSteps() {
+            stepsBody.innerHTML = '';
+            steps.sort((a, b) => a.time - b.time);
+            steps.forEach((step, i) => {
+                // Calculate ramp rate from previous step
+                let rampHTML = '<span class="ramp-na">—</span>';
+                if (i > 0) {
+                    const prev = steps[i - 1];
+                    const dt = step.time - prev.time;
+                    if (dt > 0) {
+                        const dv = (step.voltage - prev.voltage) / dt;
+                        const da = (step.current - prev.current) / dt;
+                        rampHTML = `${formatRampRate(dv, 'V')}<br>${formatRampRate(da, 'A')}`;
+                    } else {
+                        rampHTML = '<span class="ramp-na">Δt=0</span>';
+                    }
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="step-number">${i + 1}</td>
+                    <td>
+                        <div class="input-with-unit">
+                            <input type="number" class="step-input" value="${step.time}" min="0" step="0.1"
+                                onchange="updateStep(${i}, 'time', this.value)"
+                                onfocus="this.select()">
+                            <span class="unit-badge">s</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="input-with-unit">
+                            <input type="number" class="step-input" value="${step.voltage}" min="0" step="0.1"
+                                onchange="updateStep(${i}, 'voltage', this.value)"
+                                onfocus="this.select()">
+                            <span class="unit-badge">V</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="input-with-unit">
+                            <input type="number" class="step-input" value="${step.current}" min="0" step="0.1"
+                                onchange="updateStep(${i}, 'current', this.value)"
+                                onfocus="this.select()">
+                            <span class="unit-badge">A</span>
+                        </div>
+                    </td>
+                    <td class="ramp-rate">${rampHTML}</td>
+                    <td>
+                        <button class="delete-step-btn" onclick="deleteStep(${i})" title="Delete step">✕</button>
+                    </td>
+                `;
+                stepsBody.appendChild(tr);
+            });
+        }
+
+        function updateStep(index, field, value) {
+            steps[index][field] = parseFloat(value) || 0;
+            render();
+        }
+
+        function addStep() {
+            const lastStep = steps[steps.length - 1];
+            const newTime = lastStep ? lastStep.time + 5 : 0;
+            steps.push({ time: newTime, voltage: 0, current: 0 });
+            render();
+        }
+
+        function deleteStep(index) {
+            if (steps.length <= 1) return;
+            steps.splice(index, 1);
+            render();
+        }
+
+        function renderCSV() {
+            csvPreview.textContent = buildCSV();
+        }
+
+        // Listen for description/filename/protection changes
+        document.getElementById('profileDesc').addEventListener('input', renderCSV);
+        document.getElementById('profileFilename').addEventListener('input', renderCSV);
+        document.getElementById('profileOV').addEventListener('input', renderCSV);
+        document.getElementById('profileOC').addEventListener('input', renderCSV);
+
+        function buildCSV() {
+            const desc = document.getElementById('profileDesc').value || 'No description';
+            const ov = document.getElementById('profileOV').value;
+            const oc = document.getElementById('profileOC').value;
+            let csv = `description,${desc}\n`;
+            if (ov) csv += `ov_limit,${ov}\n`;
+            if (oc) csv += `oc_limit,${oc}\n`;
+            csv += `time_s,voltage,current\n`;
+            steps.forEach(s => {
+                csv += `${s.time},${s.voltage},${s.current}\n`;
+            });
+            return csv;
+        }
+
+        async function downloadCSV() {
+            const fname = document.getElementById('profileFilename').value || 'profile';
+            const filename = fname.endsWith('.csv') ? fname : fname + '.csv';
+            const csv = buildCSV();
+
+            // Try File System Access API (Chrome/Edge) — lets user pick save location
+            if (window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                        startIn: 'documents',
+                        types: [{
+                            description: 'CSV Profile',
+                            accept: { 'text/csv': ['.csv'] }
+                        }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(csv);
+                    await writable.close();
+
+                    // Show success feedback
+                    showSaveToast(`Saved: ${handle.name}`);
+                    return;
+                } catch (err) {
+                    if (err.name === 'AbortError') return; // User cancelled
+                }
+            }
+
+            // Fallback: regular browser download
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            showSaveToast(`Downloaded: ${filename} — move it to the profiles/ folder`);
+        }
+
+        function showSaveToast(message) {
+            let toast = document.getElementById('saveToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'saveToast';
+                toast.style.cssText = `
+                    position: fixed; bottom: 24px; right: 24px; 
+                    background: linear-gradient(135deg, #22c55e, #16a34a);
+                    color: white; padding: 14px 24px; border-radius: 10px;
+                    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500;
+                    box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+                    z-index: 1000; opacity: 0; transition: opacity 0.3s;
+                `;
+                document.body.appendChild(toast);
+            }
+            toast.textContent = '✓ ' + message;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+        }
+
+        function importCSV() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.trim().split('\n');
+                if (lines.length < 3) return;
+
+                // Parse metadata rows and find data start
+                document.getElementById('profileOV').value = '';
+                document.getElementById('profileOC').value = '';
+                let dataStartIndex = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    const cols = lines[i].split(',');
+                    const key = cols[0].trim().toLowerCase();
+                    if (key === 'description') {
+                        document.getElementById('profileDesc').value = cols.slice(1).join(',').trim();
+                    } else if (key === 'ov_limit' && cols.length >= 2) {
+                        document.getElementById('profileOV').value = cols[1].trim();
+                    } else if (key === 'oc_limit' && cols.length >= 2) {
+                        document.getElementById('profileOC').value = cols[1].trim();
+                    } else if (key === 'time_s') {
+                        dataStartIndex = i + 1;
+                        break;
+                    }
+                }
+
+                // Parse filename from file
+                const fname = file.name.replace('.csv', '');
+                document.getElementById('profileFilename').value = fname;
+
+                // Parse data steps
+                steps = [];
+                for (let i = dataStartIndex; i < lines.length; i++) {
+                    const cols = lines[i].split(',');
+                    if (cols.length >= 3) {
+                        const t = parseFloat(cols[0].trim());
+                        const v = parseFloat(cols[1].trim());
+                        const a = parseFloat(cols[2].trim());
+                        if (!isNaN(t) && !isNaN(v) && !isNaN(a)) {
+                            steps.push({ time: t, voltage: v, current: a });
+                        }
+                    }
+                }
+                if (steps.length === 0) {
+                    steps.push({ time: 0, voltage: 0, current: 0 });
+                }
+                render();
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // Chart rendering
+        function renderChart() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            ctx.scale(dpr, dpr);
+
+            const W = rect.width;
+            const H = rect.height;
+            const pad = { top: 30, right: 70, bottom: 50, left: 70 };
+            const plotW = W - pad.left - pad.right;
+            const plotH = H - pad.top - pad.bottom;
+
+            // Clear
+            ctx.fillStyle = '#0d1520';
+            ctx.fillRect(0, 0, W, H);
+
+            if (steps.length === 0) return;
+
+            const maxT = Math.max(...steps.map(s => s.time), 1);
+            const maxV = Math.max(...steps.map(s => s.voltage), 1) * 1.1;
+            const maxA = Math.max(...steps.map(s => s.current), 1) * 1.1;
+
+            // Grid lines
+            ctx.strokeStyle = 'rgba(42, 58, 78, 0.5)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = pad.top + plotH * i / 5;
+                ctx.beginPath();
+                ctx.moveTo(pad.left, y);
+                ctx.lineTo(pad.left + plotW, y);
+                ctx.stroke();
+            }
+            for (let i = 0; i <= 8; i++) {
+                const x = pad.left + plotW * i / 8;
+                ctx.beginPath();
+                ctx.moveTo(x, pad.top);
+                ctx.lineTo(x, pad.top + plotH);
+                ctx.stroke();
+            }
+
+            // Helper: interpolate
+            function interp(t) {
+                const sorted = [...steps].sort((a, b) => a.time - b.time);
+                if (t <= sorted[0].time) return { v: sorted[0].voltage, a: sorted[0].current };
+                if (t >= sorted[sorted.length-1].time) return { v: sorted[sorted.length-1].voltage, a: sorted[sorted.length-1].current };
+                for (let i = 0; i < sorted.length - 1; i++) {
+                    if (sorted[i].time <= t && t < sorted[i+1].time) {
+                        const frac = (t - sorted[i].time) / (sorted[i+1].time - sorted[i].time);
+                        return {
+                            v: sorted[i].voltage + (sorted[i+1].voltage - sorted[i].voltage) * frac,
+                            a: sorted[i].current + (sorted[i+1].current - sorted[i].current) * frac
+                        };
+                    }
+                }
+                return { v: sorted[sorted.length-1].voltage, a: sorted[sorted.length-1].current };
+            }
+
+            // Generate smooth points
+            const numPts = 200;
+            const pts = [];
+            for (let i = 0; i <= numPts; i++) {
+                const t = maxT * i / numPts;
+                pts.push({ t, ...interp(t) });
+            }
+
+            function toX(t) { return pad.left + (t / maxT) * plotW; }
+            function toYv(v) { return pad.top + plotH - (v / maxV) * plotH; }
+            function toYa(a) { return pad.top + plotH - (a / maxA) * plotH; }
+
+            // Draw voltage fill
+            ctx.beginPath();
+            ctx.moveTo(toX(pts[0].t), pad.top + plotH);
+            pts.forEach(p => ctx.lineTo(toX(p.t), toYv(p.v)));
+            ctx.lineTo(toX(pts[numPts].t), pad.top + plotH);
+            ctx.closePath();
+            const vGrad = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+            vGrad.addColorStop(0, 'rgba(34, 197, 94, 0.15)');
+            vGrad.addColorStop(1, 'rgba(34, 197, 94, 0.01)');
+            ctx.fillStyle = vGrad;
+            ctx.fill();
+
+            // Draw voltage line
+            ctx.beginPath();
+            pts.forEach((p, i) => {
+                const x = toX(p.t), y = toYv(p.v);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // Draw current fill
+            ctx.beginPath();
+            ctx.moveTo(toX(pts[0].t), pad.top + plotH);
+            pts.forEach(p => ctx.lineTo(toX(p.t), toYa(p.a)));
+            ctx.lineTo(toX(pts[numPts].t), pad.top + plotH);
+            ctx.closePath();
+            const aGrad = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+            aGrad.addColorStop(0, 'rgba(6, 182, 212, 0.15)');
+            aGrad.addColorStop(1, 'rgba(6, 182, 212, 0.01)');
+            ctx.fillStyle = aGrad;
+            ctx.fill();
+
+            // Draw current line
+            ctx.beginPath();
+            pts.forEach((p, i) => {
+                const x = toX(p.t), y = toYa(p.a);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // Draw step dots (voltage)
+            steps.forEach(s => {
+                ctx.beginPath();
+                ctx.arc(toX(s.time), toYv(s.voltage), 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#22c55e';
+                ctx.fill();
+                ctx.strokeStyle = '#0d1520';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Draw step dots (current)
+            steps.forEach(s => {
+                ctx.beginPath();
+                ctx.arc(toX(s.time), toYa(s.current), 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#06b6d4';
+                ctx.fill();
+                ctx.strokeStyle = '#0d1520';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Axes labels
+            ctx.font = '11px "JetBrains Mono", monospace';
+            ctx.textAlign = 'right';
+
+            // Voltage Y axis (left)
+            ctx.fillStyle = '#22c55e';
+            for (let i = 0; i <= 5; i++) {
+                const val = (maxV * (5 - i) / 5).toFixed(1);
+                const y = pad.top + plotH * i / 5;
+                ctx.fillText(val + 'V', pad.left - 8, y + 4);
+            }
+
+            // Current Y axis (right)
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#06b6d4';
+            for (let i = 0; i <= 5; i++) {
+                const val = (maxA * (5 - i) / 5).toFixed(1);
+                const y = pad.top + plotH * i / 5;
+                ctx.fillText(val + 'A', pad.left + plotW + 8, y + 4);
+            }
+
+            // Time X axis
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#64748b';
+            for (let i = 0; i <= 8; i++) {
+                const t = (maxT * i / 8).toFixed(1);
+                const x = pad.left + plotW * i / 8;
+                ctx.fillText(t + 's', x, pad.top + plotH + 20);
+            }
+
+            // Axis label titles
+            ctx.font = '12px "Inter", sans-serif';
+            ctx.fillStyle = '#64748b';
+            ctx.textAlign = 'center';
+            ctx.fillText('Time (s)', pad.left + plotW / 2, H - 8);
+
+            // Store chart geometry for hover
+            canvas._chartData = { pad, plotW, plotH, maxT, maxV, maxA, interp: interp };
+        }
+
+        // Hover tooltip
+        canvas.addEventListener('mousemove', function(e) {
+            const data = canvas._chartData;
+            if (!data) return;
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            const { pad, plotW, plotH, maxT, interp } = data;
+            if (mx < pad.left || mx > pad.left + plotW || my < pad.top || my > pad.top + plotH) {
+                tooltipEl.style.display = 'none';
+                return;
+            }
+
+            const t = ((mx - pad.left) / plotW) * maxT;
+            const vals = interp(t);
+
+            tooltipEl.style.display = 'block';
+            tooltipEl.style.left = (mx + 16) + 'px';
+            tooltipEl.style.top = (my - 10) + 'px';
+            tooltipEl.innerHTML = `
+                <div class="tt-time">t = ${t.toFixed(1)}s</div>
+                <div class="tt-voltage">${vals.v.toFixed(2)} V</div>
+                <div class="tt-current">${vals.a.toFixed(2)} A</div>
+            `;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            tooltipEl.style.display = 'none';
+        });
+
+        // Resize chart on window resize
+        window.addEventListener('resize', renderChart);
+    </script>
+</body>
+</html>

@@ -35,9 +35,9 @@ fi
 echo "[+] Installing Python dependencies..."
 source "$VENV_DIR/bin/activate"
 pip install --upgrade pip --quiet
-pip install pyvisa pyvisa-py pyusb tabulate --quiet
+pip install pyvisa pyvisa-py pyusb tabulate asciichartpy --quiet
 
-echo "[✓] Dependencies installed: pyvisa, pyvisa-py, pyusb, tabulate"
+echo "[✓] Dependencies installed: pyvisa, pyvisa-py, pyusb, tabulate, asciichartpy"
 
 # 4. Install udev rule for ITECH USB access without sudo (Linux only)
 UDEV_RULE="/etc/udev/rules.d/99-itech-psu.rules"

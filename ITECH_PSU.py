@@ -210,6 +210,30 @@ class ITECH_PSU:
 
         self.check_errors()
 
+    def query_protection_status(self):
+        """Checks if any protection has tripped (OVP, OCP, etc).
+        Returns a list of tripped protection names, or empty list if all clear.
+        Uses the SCPI Questionable Status Register."""
+        tripped = []
+        try:
+            # STAT:QUES? returns a bitmask of questionable conditions
+            # Bit 0: Over Voltage Protection
+            # Bit 1: Over Current Protection
+            # Bit 4: Over Temperature Protection
+            # Bit 9: Over Power Protection
+            status = int(self.inst.query("STAT:QUES?").strip())
+            if status & 0x01:
+                tripped.append("OVP")
+            if status & 0x02:
+                tripped.append("OCP")
+            if status & 0x10:
+                tripped.append("OTP")
+            if status & 0x200:
+                tripped.append("OPP")
+        except:
+            pass
+        return tripped
+
     def get_target_voltage(self) -> float:
         """Returns the programmed voltage setpoint"""
         return float(self.inst.query("VOLT?").strip())

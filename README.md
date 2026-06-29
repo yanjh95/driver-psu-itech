@@ -43,6 +43,8 @@ Launch the live TUI dashboard to control the PSU like a front panel:
 run.bat --live        # Windows
 ```
 
+![Live Dashboard](docs/dashboard.png)
+
 **Controls:**
 | Key | Action |
 |:---|:---|
