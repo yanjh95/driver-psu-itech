@@ -10,10 +10,10 @@ import asciichartpy
 
 def load_profile(filepath):
     """Parses a PSU profile CSV file.
-    Line 1: description,<text>
-    Line 2: header (time_s,voltage,current)
-    Line 3+: data rows
-    Returns (description, steps) where steps is a list of (time_s, voltage, current) tuples.
+    Metadata rows: description, ov_limit (optional), oc_limit (optional)
+    Data header: time_s,voltage,current
+    Data rows: float values
+    Returns (description, steps, ov_limit, oc_limit) where steps is a list of (time_s, voltage, current) tuples.
     """
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Profile not found: {filepath}")
@@ -215,6 +215,11 @@ def run_profile_cli(psu, steps, filename, description, ov_limit=None, oc_limit=N
         print(f"OC Protection: {oc_limit}A")
     print(f"{'='*50}")
 
+    # Reset setpoints before applying profile limits
+    psu.enable(0)
+    psu.set(voltage=0, amps=0)
+    print("[RESET] Setpoints zeroed")
+
     # Set protection limits if specified
     if ov_limit is not None:
         psu.set_protection(OV=ov_limit)
@@ -223,7 +228,9 @@ def run_profile_cli(psu, steps, filename, description, ov_limit=None, oc_limit=N
         psu.set_protection(OC=oc_limit)
         print(f"[PROTECT] OC limit set to {oc_limit}A")
 
-    # Enable output
+    # Set first step values, then enable output
+    v0, a0 = interpolate_profile(steps, 0)
+    psu.set(voltage=v0, amps=a0)
     psu.enable(1)
     print("[OUTPUT] Enabled")
 
@@ -291,6 +298,7 @@ def run_live_dashboard(stdscr, psu, profile_steps=None, profile_name=None, profi
     edit_string = ""
     error_msg = ""
     last_update = 0
+    expected_output_on = False  # Tracks whether WE turned the output on
 
     # Rolling telemetry history for live plots
     DEFAULT_HISTORY_SIZE = 20  # 10-second window at 0.5s polling
@@ -337,6 +345,7 @@ def run_live_dashboard(stdscr, psu, profile_steps=None, profile_name=None, profi
                         voltage_history.clear()
                         current_history.clear()
                         error_msg = ""
+                        expected_output_on = False
                     else:
                         # ESC pressed — go back to normal mode
                         profile_active = False
@@ -360,7 +369,9 @@ def run_live_dashboard(stdscr, psu, profile_steps=None, profile_name=None, profi
                     if key == ord('e'):
                         try:
                             current_state = int(psu.inst.query("OUTP?").strip())
-                            psu.enable(0 if current_state == 1 else 1)
+                            new_state = 0 if current_state == 1 else 1
+                            psu.enable(new_state)
+                            expected_output_on = (new_state == 1)
                             last_update = 0
                             error_msg = ""
                         except Exception as e:
@@ -378,6 +389,7 @@ def run_live_dashboard(stdscr, psu, profile_steps=None, profile_name=None, profi
                             voltage_history.clear()
                             current_history.clear()
                             error_msg = ""
+                            expected_output_on = False
                     elif key == curses.KEY_DOWN:
                         selected = (selected + 1) % len(fields)
                         error_msg = ""
@@ -449,12 +461,12 @@ def run_live_dashboard(stdscr, psu, profile_steps=None, profile_name=None, profi
                 if len(current_history) > history_size:
                     current_history.pop(0)
 
-                # Check for protection trips (OVP, OCP, OTP, OPP)
-                tripped = psu.query_protection_status()
-                if tripped:
-                    trip_str = " + ".join(tripped)
-                    error_msg = f"⚠ PROTECTION TRIPPED: {trip_str} — Output disabled!"
+                # Detect protection trips by output state change
+                # If we expect output ON but hardware says OFF, a protection tripped
+                if expected_output_on and out_int == 0:
+                    error_msg = "⚠ PROTECTION TRIPPED — Output was shut off by hardware!"
                     state["Output"] = "TRIP"
+                    expected_output_on = False
             except Exception as e:
                  error_msg = "COMMUNICATION ERROR"
             last_update = current_time
@@ -462,16 +474,24 @@ def run_live_dashboard(stdscr, psu, profile_steps=None, profile_name=None, profi
         # Profile interpolation and advancement
         if profile_active and profile_triggered and not profile_complete:
             if profile_start_time is None:
-                # First tick — set protection, enable output, and start the clock
+                # First tick — reset setpoints, set protection, enable output, and start the clock
                 try:
+                    # Ensure output is off and setpoints are zeroed before applying new limits
+                    psu.enable(0)
+                    psu.set(voltage=0, amps=0)
+
+                    # Now safe to set protection (OV/OC > 0V/0A setpoints)
                     if profile_ov_limit is not None:
                         psu.set_protection(OV=profile_ov_limit)
                     if profile_oc_limit is not None:
                         psu.set_protection(OC=profile_oc_limit)
-                    psu.enable(1)
-                    profile_start_time = time.time()
+
+                    # Set first step values, then enable
                     v, a = interpolate_profile(profile_steps, 0)
                     psu.set(voltage=v, amps=a)
+                    psu.enable(1)
+                    expected_output_on = True
+                    profile_start_time = time.time()
                     last_update = 0
                 except Exception as e:
                     error_msg = f"Profile ERR: {str(e)}"
@@ -491,6 +511,7 @@ def run_live_dashboard(stdscr, psu, profile_steps=None, profile_name=None, profi
                         psu.enable(0)
                     except:
                         pass
+                    expected_output_on = False
                     profile_complete = True
                     error_msg = "Profile complete — output disabled. [P] New profile | [Q] Quit"
 

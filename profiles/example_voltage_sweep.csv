@@ -1,4 +1,6 @@
 description,Voltage Sweep - Step through 5V 12V 24V 48V
+ov_limit,55
+oc_limit,6
 time_s,voltage,current
 0,5,1
 10,12,2

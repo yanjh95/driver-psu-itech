@@ -10,6 +10,8 @@ This document covers the `ITECH_PSU` driver API for integrating the power supply
 | `psu_cli.py` | CLI + interactive curses TUI dashboard |
 | `register_psu.py` | One-time setup script to register PSU hardware limits |
 | `psu_registry.json` | JSON store of registered PSUs and their safety limits |
+| `profile_editor.html` | Browser-based GUI for creating and editing profile CSV files |
+| `profiles/` | Directory containing profile CSV files (auto-discovered by the profile picker) |
 | `setup.sh` / `setup.bat` | Automated environment setup scripts |
 
 ## Code Integration
@@ -72,6 +74,7 @@ psu.close()
 | Method | Description |
 |:---|:---|
 | `check_errors()` | Flush the hardware error queue. Raises `RuntimeError` if errors found. |
+| `query_protection_status()` | Check if OVP/OCP/OTP/OPP has tripped. Returns list of tripped names. |
 | `reset()` | Reset instrument to factory defaults (`*RST`) |
 | `self_test()` | Run instrument self-test (`*TST?`) |
 
